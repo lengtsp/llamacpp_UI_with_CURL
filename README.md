@@ -258,114 +258,69 @@ When thinking is ON, the response contains a separate `reasoning_content` field:
 
 > Requires `mmproj` to be set in the preset file (vision model).
 
-Two styles are shown for each example — choose whichever fits your workflow:
+### Choosing an approach
 
-| Style | When to use |
-|-------|-------------|
-| **Variable** — declare `IMAGE` and `IMAGE_B64` first | Scripts, reuse the same file multiple times |
-| **Inline** — embed `$(base64 ...)` directly in the command | Quick one-off commands, no temp variable needed |
+| Approach | Works for any size | Notes |
+|----------|--------------------|-------|
+| **`-d @file`** (recommended) | ✅ | Writes JSON to a temp file — no OS argument size limit |
+| **Variable** (`IMAGE_B64=...`) | ⚠️ small images only | Fails with `Argument list too long` if image > ~1.5 MB |
+| **Inline** (`$(base64 ...)`) | ⚠️ small images only | Same limit — base64 string is passed as a shell argument |
 
-> **How inline works:** bash evaluates `$(...)` inside double-quoted strings, so `$(base64 -w 0 /path/to/file.png)` is substituted in place before curl runs.
-
----
-
-### Extract all text from an image
-
-**Variable style**
-
-```bash
-IMAGE=/path/to/document.png   # path to the image you want to process
-
-IMAGE_B64=$(base64 -w 0 "$IMAGE")
-
-curl http://127.0.0.1:8081/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"model\": \"Qwen3.5-27B\",
-    \"temperature\": 0.1,
-    \"messages\": [{
-      \"role\": \"user\",
-      \"content\": [
-        {\"type\": \"image_url\", \"image_url\": {\"url\": \"data:image/png;base64,${IMAGE_B64}\"}},
-        {\"type\": \"text\",      \"text\": \"Please extract all text from this image exactly as it appears.\"}
-      ]
-    }]
-  }"
-```
-
-**Inline style** (same result, no variable declaration)
-
-```bash
-curl http://127.0.0.1:8081/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"model\": \"Qwen3.5-27B\",
-    \"temperature\": 0.1,
-    \"messages\": [{
-      \"role\": \"user\",
-      \"content\": [
-        {\"type\": \"image_url\", \"image_url\": {\"url\": \"data:image/png;base64,$(base64 -w 0 /path/to/document.png)\"}},
-        {\"type\": \"text\",      \"text\": \"Please extract all text from this image exactly as it appears.\"}
-      ]
-    }]
-  }"
-```
+> **Why the limit?** bash passes `-d "..."` as a process argument. Linux limits the total argument size to ~2 MB (`ARG_MAX`). A 2 MB image becomes ~2.7 MB in base64 — already over the limit.
+> The `-d @file` approach reads the body from a file instead, so there is no size limit.
 
 ---
 
-### Extract text from a receipt / form
+### Recommended: `-d @file` (works for any image size)
 
-**Variable style**
+The pattern is the same for every use case — only the `"text"` prompt changes.
 
 ```bash
-IMAGE=/path/to/receipt.jpg   # path to the image you want to process
+IMAGE=/path/to/image.png           # ← change this
+PROMPT="Extract all text exactly as it appears."   # ← change this
 
 IMAGE_B64=$(base64 -w 0 "$IMAGE")
+TMPFILE=$(mktemp /tmp/llama-req-XXXXXX.json)
+
+cat > "$TMPFILE" << EOF
+{
+  "model": "Qwen3.5-27B",
+  "temperature": 0.1,
+  "messages": [{
+    "role": "user",
+    "content": [
+      {"type": "image_url", "image_url": {"url": "data:image/png;base64,${IMAGE_B64}"}},
+      {"type": "text", "text": "${PROMPT}"}
+    ]
+  }]
+}
+EOF
 
 curl http://127.0.0.1:8081/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d "{
-    \"model\": \"Qwen3.5-27B\",
-    \"temperature\": 0.1,
-    \"messages\": [{
-      \"role\": \"user\",
-      \"content\": [
-        {\"type\": \"image_url\", \"image_url\": {\"url\": \"data:image/jpeg;base64,${IMAGE_B64}\"}},
-        {\"type\": \"text\",      \"text\": \"Extract all text from this receipt. List each line separately.\"}
-      ]
-    }]
-  }"
+  -d @"$TMPFILE"
+
+rm "$TMPFILE"
 ```
 
-**Inline style**
+**Example prompts by task:**
 
-```bash
-curl http://127.0.0.1:8081/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"model\": \"Qwen3.5-27B\",
-    \"temperature\": 0.1,
-    \"messages\": [{
-      \"role\": \"user\",
-      \"content\": [
-        {\"type\": \"image_url\", \"image_url\": {\"url\": \"data:image/jpeg;base64,$(base64 -w 0 /path/to/receipt.jpg)\"}},
-        {\"type\": \"text\",      \"text\": \"Extract all text from this receipt. List each line separately.\"}
-      ]
-    }]
-  }"
-```
+| Task | Prompt |
+|------|--------|
+| Extract all text | `"Extract all text from this image exactly as it appears."` |
+| Receipt / form | `"Extract all text from this receipt. List each line separately."` |
+| Structured JSON | `"Extract the data and return as JSON with fields: date, total, items[]."` |
+| Describe image | `"Describe what you see in this image in detail."` |
+| Thai document | `"อ่านข้อความทั้งหมดในภาพนี้ให้ครบถ้วน"` |
 
 ---
 
-### Extract text and output structured JSON
+### For small images only (< ~1.5 MB) — inline approach
 
-**Variable style**
+If the image is small enough, you can skip the temp file entirely:
 
 ```bash
-IMAGE=/path/to/invoice.png   # path to the image you want to process
-
-IMAGE_B64=$(base64 -w 0 "$IMAGE")
-
+# Works only when base64 output + JSON body < ~2 MB total
 curl http://127.0.0.1:8081/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d "{
@@ -374,76 +329,14 @@ curl http://127.0.0.1:8081/v1/chat/completions \
     \"messages\": [{
       \"role\": \"user\",
       \"content\": [
-        {\"type\": \"image_url\", \"image_url\": {\"url\": \"data:image/png;base64,${IMAGE_B64}\"}},
-        {\"type\": \"text\",      \"text\": \"Extract the invoice data and return it as JSON with fields: date, total, items[].\"}
+        {\"type\": \"image_url\", \"image_url\": {\"url\": \"data:image/png;base64,$(base64 -w 0 /path/to/small-image.png)\"}},
+        {\"type\": \"text\",      \"text\": \"Extract all text from this image exactly as it appears.\"}
       ]
     }]
   }"
 ```
 
-**Inline style**
-
-```bash
-curl http://127.0.0.1:8081/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"model\": \"Qwen3.5-27B\",
-    \"temperature\": 0.1,
-    \"messages\": [{
-      \"role\": \"user\",
-      \"content\": [
-        {\"type\": \"image_url\", \"image_url\": {\"url\": \"data:image/png;base64,$(base64 -w 0 /path/to/invoice.png)\"}},
-        {\"type\": \"text\",      \"text\": \"Extract the invoice data and return it as JSON with fields: date, total, items[].\"}
-      ]
-    }]
-  }"
-```
-
----
-
-### Describe an image / screenshot
-
-**Variable style**
-
-```bash
-IMAGE=/path/to/screenshot.png   # path to the image you want to process
-
-IMAGE_B64=$(base64 -w 0 "$IMAGE")
-
-curl http://127.0.0.1:8081/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"model\": \"Qwen3.5-27B\",
-    \"temperature\": 0.5,
-    \"messages\": [{
-      \"role\": \"user\",
-      \"content\": [
-        {\"type\": \"image_url\", \"image_url\": {\"url\": \"data:image/png;base64,${IMAGE_B64}\"}},
-        {\"type\": \"text\",      \"text\": \"Describe what you see in this image.\"}
-      ]
-    }]
-  }"
-```
-
-**Inline style**
-
-```bash
-curl http://127.0.0.1:8081/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"model\": \"Qwen3.5-27B\",
-    \"temperature\": 0.5,
-    \"messages\": [{
-      \"role\": \"user\",
-      \"content\": [
-        {\"type\": \"image_url\", \"image_url\": {\"url\": \"data:image/png;base64,$(base64 -w 0 /path/to/screenshot.png)\"}},
-        {\"type\": \"text\",      \"text\": \"Describe what you see in this image.\"}
-      ]
-    }]
-  }"
-```
-
-> **Tip:** Use `temperature: 0.1` for OCR tasks to get the most accurate and literal transcription.
+> **Tip:** Use `temperature: 0.1` for OCR — lower temperature gives more literal, accurate text extraction.
 
 ---
 
