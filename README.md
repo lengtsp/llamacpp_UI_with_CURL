@@ -29,30 +29,30 @@ llama.cpp/build/bin/llama-server
 ## Step 2 — Create a Preset File (.ini)
 
 The preset file tells the server which model to load and sets default parameters.
-Create a file named `my-model.ini`:
+
+File: `Qwen3.5-27B-FP16.ini`
 
 ```ini
 version = 1
 
 [*]
-model           = /path/to/your-model.gguf
-mmproj          = /path/to/mmproj.gguf    # remove this line if not using vision/OCR
-c               = 12000                   # context size (tokens)
-n-gpu-layers    = 99                      # layers to offload to GPU (99 = all)
-jinja           = true                    # required for thinking mode
+model           = /home/indows-11/my_code/model/Qwen3.5 benchmark/Qwen3.5-27B/test on vayucloud/Qwen3.5-27B-BF16-merge.gguf
+mmproj          = /home/indows-11/my_code/model/Qwen3.5 benchmark/Qwen3.5-27B/mmproj-F32.gguf
+c               = 12000    # context size (tokens)
+n-gpu-layers    = 99       # layers offloaded to GPU (99 = all)
+jinja           = true     # required for thinking mode
 top-k           = 20
 min-p           = 0.0
 repeat-penalty  = 1.0
-n-predict       = 8192                    # max output tokens
+n-predict       = 8192     # max output tokens
 
-[my-model]
+[Qwen3.5-27B]              # this name is used in the "model" field of every request
 temp             = 0.7
 top-p            = 0.95
 presence-penalty = 0.0
 load-on-startup  = true
 ```
 
-> `[my-model]` becomes the model name you use in every request.
 > Parameters set here are just **defaults** — you can override any of them per request.
 
 ---
@@ -60,8 +60,11 @@ load-on-startup  = true
 ## Step 3 — Start the Server
 
 ```bash
-llama-server \
-  --models-preset "/path/to/my-model.ini" \
+LLAMA_SERVER=/home/indows-11/my_code/llama.cpp/build/bin/llama-server
+PRESET="/home/indows-11/my_code/model/Qwen3.5 benchmark/Qwen3.5-27B/llamacpp with curl (web interface)/Qwen3.5-27B-FP16.ini"
+
+$LLAMA_SERVER \
+  --models-preset "$PRESET" \
   --host 127.0.0.1 \
   --port 8081 \
   --models-max 1 \
@@ -100,13 +103,17 @@ You will see a chat UI. Type a message and press Enter — no extra setup needed
 If you have a custom `index.html`, tell the server where to find it:
 
 ```bash
-llama-server \
-  --models-preset "/path/to/my-model.ini" \
+LLAMA_SERVER=/home/indows-11/my_code/llama.cpp/build/bin/llama-server
+PRESET="/home/indows-11/my_code/model/Qwen3.5 benchmark/Qwen3.5-27B/llamacpp with curl (web interface)/Qwen3.5-27B-FP16.ini"
+GUI="/home/indows-11/my_code/model/Qwen3.5 benchmark/Qwen3.5-27B/llamacpp with curl (web interface)/gui"
+
+$LLAMA_SERVER \
+  --models-preset "$PRESET" \
   --host 127.0.0.1 \
   --port 8081 \
   --models-max 1 \
   -np 1 \
-  --path "/path/to/gui"    # folder that contains index.html
+  --path "$GUI"
 ```
 
 ---
@@ -119,7 +126,7 @@ llama-server \
 curl http://127.0.0.1:8081/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "my-model",
+    "model": "Qwen3.5-27B",
     "messages": [
       {"role": "user", "content": "Hello! What is a transformer model?"}
     ]
@@ -132,7 +139,7 @@ curl http://127.0.0.1:8081/v1/chat/completions \
 curl http://127.0.0.1:8081/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "my-model",
+    "model": "Qwen3.5-27B",
     "messages": [
       {"role": "system", "content": "You are a helpful assistant that replies concisely."},
       {"role": "user",   "content": "Explain REST API in simple terms."}
@@ -146,7 +153,7 @@ curl http://127.0.0.1:8081/v1/chat/completions \
 curl http://127.0.0.1:8081/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "my-model",
+    "model": "Qwen3.5-27B",
     "messages": [
       {"role": "user",      "content": "What is a list comprehension in Python?"},
       {"role": "assistant", "content": "It is a concise way to create lists, e.g. [x*2 for x in range(5)]."},
@@ -162,7 +169,7 @@ curl http://127.0.0.1:8081/v1/chat/completions \
 curl http://127.0.0.1:8081/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "my-model",
+    "model": "Qwen3.5-27B",
     "temperature": 0.2,
     "messages": [
       {"role": "user", "content": "Write a Python quicksort function."}
@@ -173,7 +180,7 @@ curl http://127.0.0.1:8081/v1/chat/completions \
 curl http://127.0.0.1:8081/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "my-model",
+    "model": "Qwen3.5-27B",
     "temperature": 1.0,
     "messages": [
       {"role": "user", "content": "Write a short story about a robot learning to cook."}
@@ -188,7 +195,7 @@ curl http://127.0.0.1:8081/v1/chat/completions \
   -H "Content-Type: application/json" \
   --no-buffer \
   -d '{
-    "model": "my-model",
+    "model": "Qwen3.5-27B",
     "stream": true,
     "messages": [
       {"role": "user", "content": "Write a Python linked list class."}
@@ -203,7 +210,7 @@ curl http://127.0.0.1:8081/v1/chat/completions \
 curl http://127.0.0.1:8081/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "my-model",
+    "model": "Qwen3.5-27B",
     "temperature": 0.6,
     "chat_template_kwargs": {"enable_thinking": true},
     "messages": [
@@ -215,7 +222,7 @@ curl http://127.0.0.1:8081/v1/chat/completions \
 curl http://127.0.0.1:8081/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "my-model",
+    "model": "Qwen3.5-27B",
     "temperature": 0.7,
     "chat_template_kwargs": {"enable_thinking": false},
     "messages": [
@@ -247,12 +254,14 @@ When thinking is ON, the response contains a separate `reasoning_content` field:
 ### Extract all text from an image
 
 ```bash
-IMAGE_B64=$(base64 -w 0 /path/to/document.png)
+IMAGE=/path/to/document.png   # path to the image you want to process
+
+IMAGE_B64=$(base64 -w 0 "$IMAGE")
 
 curl http://127.0.0.1:8081/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d "{
-    \"model\": \"my-model\",
+    \"model\": \"Qwen3.5-27B\",
     \"temperature\": 0.1,
     \"messages\": [{
       \"role\": \"user\",
@@ -267,12 +276,14 @@ curl http://127.0.0.1:8081/v1/chat/completions \
 ### Extract text from a receipt / form
 
 ```bash
-IMAGE_B64=$(base64 -w 0 /path/to/receipt.jpg)
+IMAGE=/path/to/receipt.jpg   # path to the image you want to process
+
+IMAGE_B64=$(base64 -w 0 "$IMAGE")
 
 curl http://127.0.0.1:8081/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d "{
-    \"model\": \"my-model\",
+    \"model\": \"Qwen3.5-27B\",
     \"temperature\": 0.1,
     \"messages\": [{
       \"role\": \"user\",
@@ -287,18 +298,20 @@ curl http://127.0.0.1:8081/v1/chat/completions \
 ### Extract text and output structured JSON
 
 ```bash
-IMAGE_B64=$(base64 -w 0 /path/to/invoice.png)
+IMAGE=/path/to/invoice.png   # path to the image you want to process
+
+IMAGE_B64=$(base64 -w 0 "$IMAGE")
 
 curl http://127.0.0.1:8081/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d "{
-    \"model\": \"my-model\",
+    \"model\": \"Qwen3.5-27B\",
     \"temperature\": 0.1,
     \"messages\": [{
       \"role\": \"user\",
       \"content\": [
         {\"type\": \"image_url\", \"image_url\": {\"url\": \"data:image/png;base64,${IMAGE_B64}\"}},
-        {\"type\": \"text\",      \"text\": \"Extract the invoice data and return it as JSON with fields: date, total, items[].\" }
+        {\"type\": \"text\",      \"text\": \"Extract the invoice data and return it as JSON with fields: date, total, items[].\"}
       ]
     }]
   }"
@@ -307,12 +320,14 @@ curl http://127.0.0.1:8081/v1/chat/completions \
 ### Describe an image / screenshot
 
 ```bash
-IMAGE_B64=$(base64 -w 0 /path/to/screenshot.png)
+IMAGE=/path/to/screenshot.png   # path to the image you want to process
+
+IMAGE_B64=$(base64 -w 0 "$IMAGE")
 
 curl http://127.0.0.1:8081/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d "{
-    \"model\": \"my-model\",
+    \"model\": \"Qwen3.5-27B\",
     \"temperature\": 0.5,
     \"messages\": [{
       \"role\": \"user\",
@@ -355,10 +370,10 @@ curl http://127.0.0.1:8081/v1/models | python3 -m json.tool
 ## Project File Structure
 
 ```
-project/
-├── my-model.ini              # preset — model path & default params
-├── your-model.gguf           # model weights (text)
-├── mmproj.gguf               # vision projector (required for OCR/image tasks)
+llamacpp with curl (web interface)/
+├── Qwen3.5-27B-FP16.ini                  # preset — model path & default params
+├── Qwen3.5-27B-BF16-merge.gguf           # model weights (text + vision)
+├── mmproj-F32.gguf                        # vision projector (required for OCR/image tasks)
 └── gui/
-    └── index.html            # optional custom web UI
+    └── index.html                         # custom web UI
 ```
