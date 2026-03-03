@@ -3,6 +3,8 @@
 Run a local LLM server and interact with it via a web browser or `curl`.
 The model loads **once** — change any parameter per request without restarting.
 
+![LLAMA.CPP Flow](images/flow.png)
+
 ---
 
 ## Step 1 — Install llama.cpp
@@ -97,6 +99,11 @@ http://127.0.0.1:8081
 ```
 
 You will see a chat UI. Type a message and press Enter — no extra setup needed.
+
+![Web Interface](images/index.png)
+
+The sidebar on the left lets you switch presets and adjust parameters live.
+Use the `☰` button to collapse the sidebar, and `🌙 / ☀️` to toggle dark/light mode.
 
 ### Using a custom Web UI
 
@@ -374,6 +381,9 @@ llamacpp with curl (web interface)/
 ├── Qwen3.5-27B-FP16.ini                  # preset — model path & default params
 ├── Qwen3.5-27B-BF16-merge.gguf           # model weights (text + vision)
 ├── mmproj-F32.gguf                        # vision projector (required for OCR/image tasks)
+├── images/
+│   ├── flow.png                           # architecture flow diagram
+│   └── index.png                          # web UI screenshot
 └── gui/
     └── index.html                         # custom web UI
 ```
