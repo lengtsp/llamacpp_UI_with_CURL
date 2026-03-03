@@ -258,7 +258,20 @@ When thinking is ON, the response contains a separate `reasoning_content` field:
 
 > Requires `mmproj` to be set in the preset file (vision model).
 
+Two styles are shown for each example — choose whichever fits your workflow:
+
+| Style | When to use |
+|-------|-------------|
+| **Variable** — declare `IMAGE` and `IMAGE_B64` first | Scripts, reuse the same file multiple times |
+| **Inline** — embed `$(base64 ...)` directly in the command | Quick one-off commands, no temp variable needed |
+
+> **How inline works:** bash evaluates `$(...)` inside double-quoted strings, so `$(base64 -w 0 /path/to/file.png)` is substituted in place before curl runs.
+
+---
+
 ### Extract all text from an image
+
+**Variable style**
 
 ```bash
 IMAGE=/path/to/document.png   # path to the image you want to process
@@ -280,7 +293,29 @@ curl http://127.0.0.1:8081/v1/chat/completions \
   }"
 ```
 
+**Inline style** (same result, no variable declaration)
+
+```bash
+curl http://127.0.0.1:8081/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"model\": \"Qwen3.5-27B\",
+    \"temperature\": 0.1,
+    \"messages\": [{
+      \"role\": \"user\",
+      \"content\": [
+        {\"type\": \"image_url\", \"image_url\": {\"url\": \"data:image/png;base64,$(base64 -w 0 /path/to/document.png)\"}},
+        {\"type\": \"text\",      \"text\": \"Please extract all text from this image exactly as it appears.\"}
+      ]
+    }]
+  }"
+```
+
+---
+
 ### Extract text from a receipt / form
+
+**Variable style**
 
 ```bash
 IMAGE=/path/to/receipt.jpg   # path to the image you want to process
@@ -302,7 +337,29 @@ curl http://127.0.0.1:8081/v1/chat/completions \
   }"
 ```
 
+**Inline style**
+
+```bash
+curl http://127.0.0.1:8081/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"model\": \"Qwen3.5-27B\",
+    \"temperature\": 0.1,
+    \"messages\": [{
+      \"role\": \"user\",
+      \"content\": [
+        {\"type\": \"image_url\", \"image_url\": {\"url\": \"data:image/jpeg;base64,$(base64 -w 0 /path/to/receipt.jpg)\"}},
+        {\"type\": \"text\",      \"text\": \"Extract all text from this receipt. List each line separately.\"}
+      ]
+    }]
+  }"
+```
+
+---
+
 ### Extract text and output structured JSON
+
+**Variable style**
 
 ```bash
 IMAGE=/path/to/invoice.png   # path to the image you want to process
@@ -324,7 +381,29 @@ curl http://127.0.0.1:8081/v1/chat/completions \
   }"
 ```
 
+**Inline style**
+
+```bash
+curl http://127.0.0.1:8081/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"model\": \"Qwen3.5-27B\",
+    \"temperature\": 0.1,
+    \"messages\": [{
+      \"role\": \"user\",
+      \"content\": [
+        {\"type\": \"image_url\", \"image_url\": {\"url\": \"data:image/png;base64,$(base64 -w 0 /path/to/invoice.png)\"}},
+        {\"type\": \"text\",      \"text\": \"Extract the invoice data and return it as JSON with fields: date, total, items[].\"}
+      ]
+    }]
+  }"
+```
+
+---
+
 ### Describe an image / screenshot
+
+**Variable style**
 
 ```bash
 IMAGE=/path/to/screenshot.png   # path to the image you want to process
@@ -340,6 +419,24 @@ curl http://127.0.0.1:8081/v1/chat/completions \
       \"role\": \"user\",
       \"content\": [
         {\"type\": \"image_url\", \"image_url\": {\"url\": \"data:image/png;base64,${IMAGE_B64}\"}},
+        {\"type\": \"text\",      \"text\": \"Describe what you see in this image.\"}
+      ]
+    }]
+  }"
+```
+
+**Inline style**
+
+```bash
+curl http://127.0.0.1:8081/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"model\": \"Qwen3.5-27B\",
+    \"temperature\": 0.5,
+    \"messages\": [{
+      \"role\": \"user\",
+      \"content\": [
+        {\"type\": \"image_url\", \"image_url\": {\"url\": \"data:image/png;base64,$(base64 -w 0 /path/to/screenshot.png)\"}},
         {\"type\": \"text\",      \"text\": \"Describe what you see in this image.\"}
       ]
     }]
